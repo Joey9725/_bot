@@ -1,0 +1,4 @@
+1:28:26 AM | apiRequest SteamAPI: Sending request to /ISteamUser/GetPlayerSummaries/v2/?key=2EE1E35E991FCAE7202477164D53B8D2&steamids=STEAM_ID1,STEAM_ID2
+1:28:26 AM | apiResponse SteamAPI: Received response: {"response":{"players":[]}}
+2:01:52 AM | apiRequest SteamAPI: Sending request to /ISteamUser/GetPlayerSummaries/v1/?key=2EE1E35E991FCAE7202477164D53B8D2&steamids=steamId1,steamId2
+2:01:52 AM | apiResponse SteamAPI: Received response: {"response":{"players":{"player":[null]}}}
