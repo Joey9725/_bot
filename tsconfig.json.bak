@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+	  "files": [
+	  "bor.ts",
+	  "config.ts",
+	  "bptf-web.ts",
+	  "steamClient.ts",
+	  "steam-web.ts",
+	  "tradeManger.ts",
+	  "logger.ts"
+	  ]
+	  "esModuleInterop": true,
+	  "target": "es6",
+	  "module": "CommonJS",
+	  "outDir": "./dist"
+	  "extends": "@tsconfig/recommended/tsconfig.json"
+	  }
+}

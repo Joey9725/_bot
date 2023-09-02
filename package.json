@@ -21,6 +21,12 @@
     "steam-community": "^0.2.2",
     "steam-totp": "^2.1.2",
     "steam-user": "^4.29.1",
-    "steamcommunity": "^3.46.1"
+    "steamcommunity": "^3.46.1",
+    "typescript": "^5.2.2",
+    "typescritp": "^1.0.0"
+  },
+  "devDependencies": {
+    "@tsconfig/recommended": "^1.0.2",
+    "@types/node": "^20.5.8"
   }
 }
