@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 const { client } = require('./steamClient');
 const Logger = require('./logger');
-const SteamCommunity = require('steamcommunity'); // Assuming the package name is 'steamcommunity'
+const SteamCommunity = require('steamcommunity');
 const { BOT_NAME, OWNER_ID, IDENTITY_SECRET } = require('./config');
 const logger = new Logger(BOT_NAME);
 const community = new SteamCommunity();

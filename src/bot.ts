@@ -1,11 +1,10 @@
-const { client, loginToSteam, community } = require('./steamClient');
-const SteamUser = require('steam-user');
-const { getPriceHistory } = require('./backpacktf');
-const Logger = require('./logger');
-const { STEAM_ERROR_CODES, BOT_NAME } = require('./config');
-const { handleSteamError } = require('./utils');
+import SteamUser from 'steam-user';
+import { getPriceHistory } from '../bptf-web';
+import { Logger } from '../logger';
+import { BOT_NAME } from '../config';
+import { loginToSteam, client, community } from '../steamClient';
 
-const logger = new Logger(BOT_NAME);
+const logger: Logger = new Logger(BOT_NAME);
 
 let currentRetry = 0;
 const retryInterval = 10000; // 10 seconds
@@ -32,7 +31,7 @@ client.on('error', (err) => {
     }
 });
 
-loginToSteam();
+client.loginToSteam();
 
 // PRICES TEST
 async function test() {
@@ -51,38 +50,12 @@ async function test() {
         logger.error(`Error Details: ${JSON.stringify(error, null, 2)}`);
 
         if (error.response) {
-            logger.info('Error Response:', JSON.stringify(error.response.data, null, 2));
+            const errorMessage = `Unhandled promise rejection: Reason: ${(reason as Error).stack || reason}`;
         }
     }
 }
 
 test();
 
-// ERROR HANDLING
-client.on('error', (err) => {
-    logger.error(`There was an error logging into Steam: ${err.message}`);
-});
 
-client.on('friendMessage', (steamID, message) => {
-    // Handle incoming messages from friends
-    // You can add your message handling logic here
-    console.log(`Received message from ${steamID.getSteamID64()}: ${message}`);
-});
 
-client.on('tradeOffers', async (offers) => {
-    console.log('Received trade offers:', offers);
-    const offerArray = Object.values(offers);
-    for (const offer of offerArray) {
-        await handleOffer(offer);
-    }
-});
-
-process.on('uncaughtException', (err) => {
-    logger.error(`Uncaught exception: ${err.message}`);
-    process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-    const errorMessage = `Unhandled promise rejection: Reason: ${reason.stack || reason}`;
-    logger.error(errorMessage);
-});

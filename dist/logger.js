@@ -33,6 +33,12 @@ const MAX_LOG_FILES = 10; // Number of log files to keep
 class Logger {
     constructor(loggerName) {
         this.loggerName = loggerName;
+        // ANSI Escape Codes for text colors
+        this.RED = '\x1b[31m';
+        this.GREEN = '\x1b[32m';
+        this.YELLOW = '\x1b[33m';
+        this.BLUE = '\x1b[34m';
+        this.RESET = '\x1b[0m';
         this.initializeLogStream();
     }
     initializeLogStream() {
@@ -58,8 +64,27 @@ class Logger {
         }
     }
     log(level, message) {
-        const logMessage = `[${new Date().toISOString()}] [${level}] ${message}\n`;
+        const timestamp = `[${new Date().toISOString()}]`;
+        let colorizedLevel;
+        switch (level) {
+            case 'INFO':
+                colorizedLevel = `${this.GREEN}INFO${this.RESET}`;
+                break;
+            case 'WARN':
+                colorizedLevel = `${this.YELLOW}WARN${this.RESET}`;
+                break;
+            case 'ERROR':
+                colorizedLevel = `${this.RED}ERROR${this.RESET}`;
+                break;
+            case 'DEBUG':
+                colorizedLevel = `${this.BLUE}DEBUG${this.RESET}`;
+                break;
+            default:
+                colorizedLevel = level;
+        }
+        const logMessage = `${timestamp} [${colorizedLevel}] ${message}\n`;
         this.logStream.write(logMessage);
+        console.log(logMessage); // Output to console with color
         const currentLogFileSize = this.getLogFileSize();
         if (currentLogFileSize >= MAX_LOG_FILE_SIZE) {
             this.rotateLogFile();

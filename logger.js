@@ -10,6 +10,12 @@ var MAX_LOG_FILES = 10; // Number of log files to keep
 var Logger = /** @class */ (function () {
     function Logger(loggerName) {
         this.loggerName = loggerName;
+        // ANSI Escape Codes for text colors
+        this.RED = '\x1b[31m';
+        this.GREEN = '\x1b[32m';
+        this.YELLOW = '\x1b[33m';
+        this.BLUE = '\x1b[34m';
+        this.RESET = '\x1b[0m';
         this.initializeLogStream();
     }
     Logger.prototype.initializeLogStream = function () {
@@ -36,8 +42,27 @@ var Logger = /** @class */ (function () {
         }
     };
     Logger.prototype.log = function (level, message) {
-        var logMessage = "[".concat(new Date().toISOString(), "] [").concat(level, "] ").concat(message, "\n");
+        var timestamp = "[".concat(new Date().toISOString(), "]");
+        var colorizedLevel;
+        switch (level) {
+            case 'INFO':
+                colorizedLevel = "".concat(this.GREEN, "INFO").concat(this.RESET);
+                break;
+            case 'WARN':
+                colorizedLevel = "".concat(this.YELLOW, "WARN").concat(this.RESET);
+                break;
+            case 'ERROR':
+                colorizedLevel = "".concat(this.RED, "ERROR").concat(this.RESET);
+                break;
+            case 'DEBUG':
+                colorizedLevel = "".concat(this.BLUE, "DEBUG").concat(this.RESET);
+                break;
+            default:
+                colorizedLevel = level;
+        }
+        var logMessage = "".concat(timestamp, " [").concat(colorizedLevel, "] ").concat(message, "\n");
         this.logStream.write(logMessage);
+        console.log(logMessage); // Output to console with color
         var currentLogFileSize = this.getLogFileSize();
         if (currentLogFileSize >= MAX_LOG_FILE_SIZE) {
             this.rotateLogFile();

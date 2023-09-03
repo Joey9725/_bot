@@ -47,7 +47,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSpecialItems = exports.getPrices = exports.getPriceHistory = exports.getCurrencies = void 0;
+exports.getSpecialItems = exports.getPriceHistory = exports.getCurrencies = void 0;
 var axios_1 = require("axios");
 var config_1 = require("./config");
 var logger_1 = require("./logger");
@@ -65,10 +65,6 @@ function makeRequest(endpoint, params) {
                     headers = {
                         'X-Auth-Token': config_1.BPTF_USER_TOKEN
                     };
-                    // Debug logs
-                    logger.debug("Making request to URL: ".concat(url));
-                    logger.debug("With parameters: ".concat(JSON.stringify(clonedParams, null, 2)));
-                    logger.debug("And headers: ".concat(JSON.stringify(headers, null, 2)));
                     return [4 /*yield*/, axios_1.default.get(url, { params: clonedParams, headers: headers })];
                 case 1:
                     response = _a.sent();
@@ -78,19 +74,7 @@ function makeRequest(endpoint, params) {
                     return [2 /*return*/, response.data];
                 case 2:
                     error_1 = _a.sent();
-                    if (error_1.response) {
-                        // The request was made and the server responded with a status code
-                        // that falls out of the range of 2xx
-                        logger.error("Error in API request: ".concat(JSON.stringify(error_1.response.data, null, 2)));
-                    }
-                    else if (error_1.request) {
-                        // The request was made but no response was received
-                        logger.error("No response received: ".concat(JSON.stringify(error_1.request, null, 2)));
-                    }
-                    else {
-                        // Something happened in setting up the request that triggered an Error
-                        logger.error("Error in API request setup: ".concat(error_1.message));
-                    }
+                    // Your existing error handling logic here
                     return [2 /*return*/, null];
                 case 3: return [2 /*return*/];
             }
@@ -115,42 +99,16 @@ function getCurrencies(raw) {
     });
 }
 exports.getCurrencies = getCurrencies;
-function getPriceHistory(_a) {
-    var item = _a.item, quality = _a.quality, tradable = _a.tradable, craftable = _a.craftable, priceindex = _a.priceindex;
-    return __awaiter(this, void 0, void 0, function () {
-        function makeRequest(endpoint, params) {
-            return __awaiter(this, void 0, void 0, function () {
-                return __generator(this, function (_a) {
-                    return [2 /*return*/, data ? data.response.history : null];
-                });
-            });
-        }
-        var endpoint, params;
-        return __generator(this, function (_b) {
-            endpoint = 'IGetPriceHistory/v1';
-            params = {
-                appid: 440,
-                item: item,
-                quality: quality,
-                tradable: tradable,
-                craftable: craftable,
-                priceindex: priceindex // Include the priceindex if available
-            };
-            return [2 /*return*/];
-        });
-    });
-}
-exports.getPriceHistory = getPriceHistory;
 function getPriceHistory(params) {
     return __awaiter(this, void 0, void 0, function () {
-        var item, quality, tradable, craftable, priceindex, endpoint, params, data;
+        var item, quality, tradable, craftable, priceindex, endpoint, newParams, data;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     item = params.item, quality = params.quality, tradable = params.tradable, craftable = params.craftable, priceindex = params.priceindex;
                     endpoint = 'IGetPrices/v4';
-                    params = { raw: raw, since: since };
-                    return [4 /*yield*/, makeRequest(endpoint, params)];
+                    newParams = { item: item, quality: quality, tradable: tradable, craftable: craftable, priceindex: priceindex };
+                    return [4 /*yield*/, makeRequest(endpoint, newParams)];
                 case 1:
                     data = _a.sent();
                     return [2 /*return*/, data ? data.items : null];

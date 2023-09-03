@@ -1,6 +1,6 @@
 const { client } = require('./steamClient');
 const Logger = require('./logger');
-const SteamCommunity = require('steamcommunity'); // Assuming the package name is 'steamcommunity'
+const SteamCommunity = require('steamcommunity');
 const { BOT_NAME, OWNER_ID, IDENTITY_SECRET } = require('./config');
 
 

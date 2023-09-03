@@ -1,4 +1,3 @@
-// steam-web.ts
 import axios from 'axios';
 import { Logger } from './logger'; // Adjust the path as needed
 import { STEAM_API_KEY, STEAM_ID } from './config'; // Importing from your config file
