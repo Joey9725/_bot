@@ -1,4 +1,5 @@
 node_modules
-api_log.txt
-log.txt
+logs
+dist
+.js
 .env
