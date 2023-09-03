@@ -22,7 +22,8 @@
     "steam-user": "^4.29.1",
     "tough-cookie": "^4.1.3",
     "typescript": "^5.2.2",
-    "xml2js": "^0.6.2"
+    "xml2js": "^0.6.2",
+    "extends": "@tsconfig/recommended/tsconfig.json"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.2",
