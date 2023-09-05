@@ -1,5 +1,5 @@
-// error-handler.ts
 import { Logger } from './logger';
+import { client, community, loginToSteam, Offer } from './steamClient';
 
 const logger = new Logger('ErrorHandler');
 

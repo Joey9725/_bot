@@ -33,7 +33,6 @@ const MAX_LOG_FILES = 10; // Number of log files to keep
 class Logger {
     constructor(loggerName) {
         this.loggerName = loggerName;
-        // ANSI Escape Codes for text colors
         this.RED = '\x1b[31m';
         this.GREEN = '\x1b[32m';
         this.YELLOW = '\x1b[33m';
@@ -48,7 +47,7 @@ class Logger {
         this.rotateLogFiles();
         const logFilePath = path.join(LOGS_DIRECTORY, `${this.loggerName}.log`);
         if (!fs.existsSync(logFilePath)) {
-            fs.writeFileSync(logFilePath, ''); // Create an empty log file if it doesn't exist
+            fs.writeFileSync(logFilePath, '');
         }
         this.logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
     }
@@ -56,7 +55,6 @@ class Logger {
         const existingLogs = fs.readdirSync(LOGS_DIRECTORY);
         const logFiles = existingLogs.filter((file) => file.startsWith('log'));
         if (logFiles.length >= MAX_LOG_FILES) {
-            // Remove excess log files
             const filesToRemove = logFiles.slice(0, logFiles.length - MAX_LOG_FILES + 1);
             for (const fileToRemove of filesToRemove) {
                 fs.unlinkSync(path.join(LOGS_DIRECTORY, fileToRemove));
@@ -84,7 +82,7 @@ class Logger {
         }
         const logMessage = `${timestamp} [${colorizedLevel}] ${message}\n`;
         this.logStream.write(logMessage);
-        console.log(logMessage); // Output to console with color
+        console.log(logMessage);
         const currentLogFileSize = this.getLogFileSize();
         if (currentLogFileSize >= MAX_LOG_FILE_SIZE) {
             this.rotateLogFile();
@@ -103,18 +101,18 @@ class Logger {
         this.log('DEBUG', message);
     }
     getLogFileSize() {
-        const logFilePath = path.join(LOGS_DIRECTORY, `${this.loggerName}.log`);
-        if (fs.existsSync(logFilePath)) {
-            const stats = fs.statSync(logFilePath);
+        try {
+            const stats = fs.statSync(LOG_FILE_PATH);
             return stats.size;
         }
-        return 0; // Return 0 if the file doesn't exist
+        catch (error) {
+            return 0;
+        }
     }
     rotateLogFile() {
         this.logStream.end();
-        const logFilePath = path.join(LOGS_DIRECTORY, 'log.txt');
         const rotatedLogFilePath = path.join(LOGS_DIRECTORY, `log_${Date.now()}.txt`);
-        fs.renameSync(logFilePath, rotatedLogFilePath);
+        fs.renameSync(LOG_FILE_PATH, rotatedLogFilePath);
         this.initializeLogStream();
     }
 }

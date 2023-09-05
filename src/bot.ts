@@ -1,8 +1,7 @@
-import SteamUser from 'steam-user';
 import { getPriceHistory } from '../bptf-web';
 import { Logger } from '../logger';
 import { BOT_NAME } from '../config';
-import { loginToSteam, client, community } from '../steamClient';
+import { client, community, loginToSteam, Offer } from './steamClient';
 
 const logger: Logger = new Logger(BOT_NAME);
 
@@ -12,7 +11,7 @@ const retryInterval = 10000; // 10 seconds
 client.on('loggedOn', () => {
     logger.info('Bot is online!');
     currentRetry = 0; // Reset retry count on successful login
-    client.setPersona(SteamUser.EPersonaState.Online);
+    client.setPersona(client.EPersonaState.Online);
     client.gamesPlayed([440, "beep...TRADING...boop"]);
 });
 
@@ -31,7 +30,7 @@ client.on('error', (err) => {
     }
 });
 
-client.loginToSteam();
+loginToSteam();  // Corrected this line
 
 // PRICES TEST
 async function test() {
@@ -50,12 +49,9 @@ async function test() {
         logger.error(`Error Details: ${JSON.stringify(error, null, 2)}`);
 
         if (error.response) {
-            const errorMessage = `Unhandled promise rejection: Reason: ${(reason as Error).stack || reason}`;
+            const errorMessage = `Unhandled promise rejection: Reason: ${(error as Error).stack || error}`;  // Corrected this line
         }
     }
 }
 
 test();
-
-
-
