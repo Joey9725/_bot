@@ -53,6 +53,8 @@ var config_1 = require("./config");
 var logger_1 = require("./logger");
 var logger = new logger_1.Logger('BPTFAPI');
 var BASE_URL = 'https://backpack.tf/api/';
+// Variable to store the rate limit reset time
+var rateLimitResetTime = 0;
 function makeRequest(endpoint, params) {
     return __awaiter(this, void 0, void 0, function () {
         var url, clonedParams, headers, response, error_1;
@@ -60,6 +62,10 @@ function makeRequest(endpoint, params) {
             switch (_a.label) {
                 case 0:
                     _a.trys.push([0, 2, , 3]);
+                    // Check if the rate limit has been exceeded
+                    if (Date.now() < rateLimitResetTime) {
+                        throw new Error('Rate limit exceeded. Please wait.');
+                    }
                     url = "".concat(BASE_URL).concat(endpoint);
                     clonedParams = __assign(__assign({}, params), { key: config_1.BPTF_API_KEY });
                     headers = {
@@ -68,6 +74,10 @@ function makeRequest(endpoint, params) {
                     return [4 /*yield*/, axios_1.default.get(url, { params: clonedParams, headers: headers })];
                 case 1:
                     response = _a.sent();
+                    // Update the rate limit reset time
+                    if (response.headers['x-rate-limit-reset']) {
+                        rateLimitResetTime = Number(response.headers['x-rate-limit-reset']) * 1000;
+                    }
                     if (response.status !== 200) {
                         throw new Error("Failed to fetch data: ".concat(response.statusText));
                     }

@@ -2,8 +2,15 @@ import axios from 'axios';
 import { BPTF_API_KEY, BPTF_USER_TOKEN } from './config';
 import { Logger } from './logger';
 
+if (!BPTF_API_KEY || !BPTF_USER_TOKEN) {
+  throw new Error("API key and/or user token are missing");
+}
+
 const logger = new Logger('BPTFAPI');
 const BASE_URL = 'https://backpack.tf/api/';
+
+// Variable to store the rate limit reset time
+let rateLimitResetTime: number = 0;
 
 interface PriceHistoryParams {
   item: string;
@@ -15,15 +22,28 @@ interface PriceHistoryParams {
 
 async function makeRequest(endpoint: string, params: Record<string, any>) {
   try {
+    // Check if the rate limit has been exceeded
+    if (Date.now() < rateLimitResetTime) {
+      throw new Error('Rate limit exceeded. Please wait.');
+    }
+
     const url = `${BASE_URL}${endpoint}`;
     const clonedParams = { ...params, key: BPTF_API_KEY };
     const headers = {
       'X-Auth-Token': BPTF_USER_TOKEN
     };
+
     const response = await axios.get(url, { params: clonedParams, headers });
+
+    // Update the rate limit reset time
+    if (response.headers['x-rate-limit-reset']) {
+      rateLimitResetTime = Number(response.headers['x-rate-limit-reset']) * 1000;
+    }
+
     if (response.status !== 200) {
       throw new Error(`Failed to fetch data: ${response.statusText}`);
     }
+
     return response.data;
   } catch (error: any) {
     logger.error(`Error fetching data: ${error.message}`);

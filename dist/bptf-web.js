@@ -16,17 +16,30 @@ exports.getNotifications = exports.getUserClassifiedListingLimits = exports.sear
 const axios_1 = __importDefault(require("axios"));
 const config_1 = require("./config");
 const logger_1 = require("./logger");
+if (!config_1.BPTF_API_KEY || !config_1.BPTF_USER_TOKEN) {
+    throw new Error("API key and/or user token are missing");
+}
 const logger = new logger_1.Logger('BPTFAPI');
 const BASE_URL = 'https://backpack.tf/api/';
+// Variable to store the rate limit reset time
+let rateLimitResetTime = 0;
 function makeRequest(endpoint, params) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            // Check if the rate limit has been exceeded
+            if (Date.now() < rateLimitResetTime) {
+                throw new Error('Rate limit exceeded. Please wait.');
+            }
             const url = `${BASE_URL}${endpoint}`;
             const clonedParams = Object.assign(Object.assign({}, params), { key: config_1.BPTF_API_KEY });
             const headers = {
                 'X-Auth-Token': config_1.BPTF_USER_TOKEN
             };
             const response = yield axios_1.default.get(url, { params: clonedParams, headers });
+            // Update the rate limit reset time
+            if (response.headers['x-rate-limit-reset']) {
+                rateLimitResetTime = Number(response.headers['x-rate-limit-reset']) * 1000;
+            }
             if (response.status !== 200) {
                 throw new Error(`Failed to fetch data: ${response.statusText}`);
             }
