@@ -31,27 +31,3 @@ client.on('error', (err) => {
 });
 
 loginToSteam();  // Corrected this line
-
-// PRICES TEST
-async function test() {
-    try {
-        const prices = await getPriceHistory({
-            item: 'Team Captain',
-            quality: 'Unusual',
-            tradable: 'Tradable',
-            craftable: 'Craftable',
-            priceindex: '34'  // Replace with the actual price index
-        });
-
-        console.log(prices);
-    } catch (error) {
-        logger.error('Error fetching prices');
-        logger.error(`Error Details: ${JSON.stringify(error, null, 2)}`);
-
-        if (error.response) {
-            const errorMessage = `Unhandled promise rejection: Reason: ${(error as Error).stack || error}`;  // Corrected this line
-        }
-    }
-}
-
-test();

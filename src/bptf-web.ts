@@ -6,10 +6,16 @@ if (!BPTF_API_KEY || !BPTF_USER_TOKEN) {
   throw new Error("API key and/or user token are missing");
 }
 
+class BPTFAPIError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BPTFAPIError';
+  }
+}
+
 const logger = new Logger('BPTFAPI');
 const BASE_URL = 'https://backpack.tf/api/';
-
-// Variable to store the rate limit reset time
+type MakeRequestParams = Record<string, any>;
 let rateLimitResetTime: number = 0;
 
 interface PriceHistoryParams {
@@ -20,34 +26,38 @@ interface PriceHistoryParams {
   priceindex: string;
 }
 
-async function makeRequest(endpoint: string, params: Record<string, any>) {
+async function makeRequest(endpoint: string, params: MakeRequestParams) {
   try {
-    // Check if the rate limit has been exceeded
     if (Date.now() < rateLimitResetTime) {
-      throw new Error('Rate limit exceeded. Please wait.');
+      throw new BPTFAPIError('Rate limit exceeded. Please wait.');
     }
-
     const url = `${BASE_URL}${endpoint}`;
     const clonedParams = { ...params, key: BPTF_API_KEY };
     const headers = {
       'X-Auth-Token': BPTF_USER_TOKEN
     };
-
     const response = await axios.get(url, { params: clonedParams, headers });
 
-    // Update the rate limit reset time
-    if (response.headers['x-rate-limit-reset']) {
+    if (response.headers && response.headers['x-rate-limit-reset']) {
       rateLimitResetTime = Number(response.headers['x-rate-limit-reset']) * 1000;
+    } else {
+      rateLimitResetTime = Date.now() + 60000; // Set a default value of 1 minute
     }
 
     if (response.status !== 200) {
-      throw new Error(`Failed to fetch data: ${response.statusText}`);
+      if (response.status === 404) {
+        throw new BPTFAPIError('Resource not found');
+      } else if (response.status === 500) {
+        throw new BPTFAPIError('Internal server error');
+      } else {
+        throw new BPTFAPIError(`Failed to fetch data: ${response.statusText}`);
+      }
     }
 
     return response.data;
   } catch (error: any) {
     logger.error(`Error fetching data: ${error.message}`);
-    return null;
+    throw new BPTFAPIError(`Error fetching data: ${error.message}`);
   }
 }
 
@@ -63,20 +73,20 @@ async function getCurrencies(raw = 2) {
 }
 
 async function getPriceHistory(params: PriceHistoryParams) {
-  const { item, quality, tradable, craftable, priceindex } = params;
+  const {item, quality, tradable, craftable, priceindex} = params;
   const endpoint = 'IGetPrices/v4';
-  const newParams = { item, quality, tradable, craftable, priceindex };
+  const newParams = {item, quality, tradable, craftable, priceindex};
   const data = await makeRequest(endpoint, newParams);
   if (!data) {
     logger.warn('Failed to retrieve price history data');
-    return null;
+    return [];
   }
   return data.items;
 }
 
 async function getSpecialItems(appid = 440) {
   const endpoint = 'IGetSpecialItems/v1';
-  const params = { appid };
+  const params = {appid};
   const data = await makeRequest(endpoint, params);
   if (!data) {
     logger.warn('Failed to retrieve special items data');
@@ -87,14 +97,14 @@ async function getSpecialItems(appid = 440) {
 
 async function getUserData(steamid: string) {
   const endpoint = 'IGetUsers/v3';
-  const params = { steamid };
+  const params = {steamid};
   const data = await makeRequest(endpoint, params);
   return data ? data.users[0] : null;
 }
 
 async function getPriceSchema(raw = 2, since?: number) {
   const endpoint = 'IGetPrices/v4';
-  const params = { raw, since };
+  const params = {raw, since};
   const data = await makeRequest(endpoint, params);
   return data ? data.pricelist : null;
 }
@@ -113,7 +123,7 @@ async function getUserListings(steamid: string) {
 
 async function getPriceHistoryForItem(appid: string, item: string, quality: string, tradable: string, craftable: string, priceindex: string) {
   const endpoint = 'IGetPriceHistory/v1';
-  const params = { appid, item, quality, tradable, craftable, priceindex };
+  const params = {appid, item, quality, tradable, craftable, priceindex};
   const data = await makeRequest(endpoint, params);
   if (!data) {
     logger.warn('Failed to retrieve price history for the item');
@@ -124,7 +134,7 @@ async function getPriceHistoryForItem(appid: string, item: string, quality: stri
 
 async function getImpersonatedUsers(limit: number, skip: number) {
   const endpoint = 'IGetUsers/GetImpersonatedUsers';
-  const params = { limit, skip };
+  const params = {limit, skip};
   const data = await makeRequest(endpoint, params);
   if (!data) {
     logger.warn('Failed to retrieve impersonated users');
@@ -155,7 +165,7 @@ async function getUserClassifiedListingLimits() {
 
 async function getNotifications(skip: number, limit: number, unread: number) {
   const endpoint = 'notifications';
-  const params = { skip, limit, unread };
+  const params = {skip, limit, unread};
   const data = await makeRequest(endpoint, params);
   if (!data) {
     logger.warn('Failed to get notifications');
@@ -165,13 +175,14 @@ async function getNotifications(skip: number, limit: number, unread: number) {
 }
 
 export {
+  makeRequest,
   getCurrencies,
-  getSpecialItems,
-  getUserListings,
-  getPriceSchema,
-  getUserData,
-  searchClassifieds,
   getPriceHistory,
+  getSpecialItems,
+  getUserData,
+  getPriceSchema,
+  searchClassifieds,
+  getUserListings,
   getPriceHistoryForItem,
   getImpersonatedUsers,
   searchClassifiedsV1,
