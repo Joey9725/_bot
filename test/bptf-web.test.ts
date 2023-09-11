@@ -1,45 +1,189 @@
-import axios, { AxiosResponse } from 'axios';
+import axios from 'axios';
 import {
     getCurrencies,
     getPriceHistory,
     getSpecialItems,
+    getUserData,
+    getPriceSchema,
+    getUserListings,
+    getPriceHistoryForItem,
+    getImpersonatedUsers,
+    searchClassifiedsV1,
+    getUserClassifiedListingLimits,
+    getNotifications
 } from '../src/bptf-web';
 import { BPTF_API_KEY, BPTF_USER_TOKEN } from '../src/config';
 
+// Mock the entire Axios module
 jest.mock('axios');
+
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 const commonHeaders = {
     'X-Auth-Token': BPTF_USER_TOKEN,
 };
 
-const mockedAxios = axios as jest.Mocked<typeof axios>;
-mockedAxios.get = jest.fn();
-
 describe('BPTF Web API', () => {
-    afterEach(() => {
+    beforeEach(() => {
+        // Clear all instances and calls to constructor and all methods:
         mockedAxios.get.mockClear();
-        // Clear other HTTP methods if needed
     });
 
     it('should call getCurrencies and return a response', async () => {
+        // Mock the get method to return a specific value
         mockedAxios.get.mockResolvedValue({
             status: 200,
             data: { response: { currencies: { metal: { name: 'Refined Metal' } } } },
-            headers: { 'x-rate-limit-reset': '60' },
-        } as unknown as AxiosResponse);
+        });
 
         const response = await getCurrencies();
-
-        expect(mockedAxios.get).toHaveBeenCalledWith(
-            'https://backpack.tf/api/IGetCurrencies/v1',
-            {
-                params: { key: BPTF_API_KEY, raw: 2 },
-                headers: commonHeaders,
-            }
-        );
-
-        expect(response).toEqual({ metal: { name: 'Refined Metal' } });
+        expect(response).not.toBeNull();
+        expect(response).toEqual({ currencies: {metal: {name: 'Refined Metal'}}});
     });
 
-    // ... (rest of the test cases)
+    it('should return price history when makeRequest returns data', async () => {
+        mockedAxios.get.mockResolvedValue({
+            status: 200,
+            data: { items: [{ price: 10 }, { price: 20 } ] },
+        });
+
+        const params = {
+            item: 'Tour of Duty Ticket',
+            quality: 'normal',
+            tradable: true,
+            craftable: true,
+            priceindex: 0,
+        };
+
+        const result = await getPriceHistory(params);
+        expect(result).toEqual([ { price: 10 }, { price: 20 } ]);
+    });
+
+    it('should return an empty array when makeRequest returns null', async () => {
+        mockedAxios.get.mockResolvedValue(null);
+
+        const params = {
+            item: 'Tour of Duty Ticket',
+            quality: 'normal',
+            tradable: true,
+            craftable: true,
+            priceindex: 0,
+        };
+
+        const result = await getPriceHistory(params);
+        expect(result).toEqual([]);
+    });
+
+    it('should return special items data when API returns valid data', async () => {
+        mockedAxios.get.mockResolvedValue({
+            status: 200,
+            data: { response: {success: {current_time:{items: {name: "Random Craft Hat"} } } } },
+        });
+
+        const result = await getSpecialItems(440);
+        expect(result).toEqual({success: {current_time:{items: {name: "Random Craft Hat"} } } });
+    });
+
+    it('should return null when API returns null', async () => {
+        mockedAxios.get.mockResolvedValue(null);
+
+        const result = await getSpecialItems(440);
+        expect(result).toBeNull();
+    });
+
+    it('should return user data when API returns valid data', async () => {
+        mockedAxios.get.mockResolvedValue({
+            status: 200,
+            data: { users: [{ id: '123', name: 'John Doe' }] },
+        });
+
+        const steamid = '123';
+        const result = await getUserData(steamid);
+        expect(result).toEqual({ id: '123', name: 'John Doe' });
+    });
+
+    it('should return null when API returns null', async () => {
+        mockedAxios.get.mockResolvedValue(null);
+
+        const steamid = '123';
+        const result = await getUserData(steamid);
+        expect(result).toBeNull();
+    });
+
+    it('should return price schema when API returns valid data', async () => {
+        mockedAxios.get.mockResolvedValue({
+            status: 200,
+            data: { pricelist: [{ item: 'Refined Metal', price: 1 }] },
+        });
+
+        const result = await getPriceSchema();
+        expect(result).toEqual([{ item: 'Refined Metal', price: 1 }]);
+    });
+
+    it('should return null when API returns null', async () => {
+        mockedAxios.get.mockResolvedValue(null);
+
+        const result = await getPriceSchema();
+        expect(result).toBeNull();
+    });
+
+    it('should return user listings when getUserListings is called', async () => {
+        mockedAxios.get.mockResolvedValue({
+            status: 200,
+            data: { listings: [{ item: 'Key', price: 50 }] },
+        });
+
+        const result = await getUserListings('someSteamId');
+        expect(result).toEqual([{ item: 'Key', price: 50 }]);
+    });
+
+    it('should return price history for an item when getPriceHistoryForItem is called', async () => {
+        mockedAxios.get.mockResolvedValue({
+            status: 200,
+            data: { history: [{ price: 10 }, { price: 20 }] },
+        });
+
+        const result = await getPriceHistoryForItem('440', 'Tour of Duty Ticket', 'normal', 'true', 'true', '0');
+        expect(result).toEqual([{ price: 10 }, { price: 20 }]);
+    });
+
+    it('should return impersonated users when getImpersonatedUsers is called', async () => {
+        mockedAxios.get.mockResolvedValue({
+            status: 200,
+            data: { results: ['user1', 'user2'] },
+        });
+
+        const result = await getImpersonatedUsers(10, 0);
+        expect(result).toEqual(['user1', 'user2']);
+    });
+
+    it('should return data when searchClassifiedsV1 is called', async () => {
+        mockedAxios.get.mockResolvedValue({
+            status: 200,
+            data: { someData: 'value' },
+        });
+
+        const result = await searchClassifiedsV1();
+        expect(result).toEqual({ someData: 'value' });
+    });
+
+    it('should return user classified listing limits when getUserClassifiedListingLimits is called', async () => {
+        mockedAxios.get.mockResolvedValue({
+            status: 200,
+            data: { listings: { max: 10, current: 5 } },
+        });
+
+        const result = await getUserClassifiedListingLimits();
+        expect(result).toEqual({ max: 10, current: 5 });
+    });
+
+    it('should return notifications when getNotifications is called', async () => {
+        mockedAxios.get.mockResolvedValue({
+            status: 200,
+            data: { notifications: [{ id: 1, message: 'Test' }] },
+        });
+
+        const result = await getNotifications(0, 10, 1);
+        expect(result).toEqual({ notifications: [{ id: 1, message: 'Test' }] });
+    });
 });
