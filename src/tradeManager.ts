@@ -1,21 +1,29 @@
-import { client, community, loginToSteam, Offer } from './steamClient';
+import { client as baseClient, community, Offer } from './steamClient';
+import SteamUser from "steam-user";
+
 const { OWNER_ID, IDENTITY_SECRET } = require('./config');
+const client = baseClient as MyCustomSteamUser;
+interface MyCustomSteamUser extends SteamUser {
+    acceptOffer(id: string): Promise<any>;
+    declineOffer(id: string): Promise<any>;
+}
 
 
 enum ETradeOfferState {
+    Invalid = 1,
     Active = 2,
-    // Add other states as needed
+    Accepted = 3,
+    Countered = 4,
+    Expired = 5,
+    Canceled = 6,
+    Declined = 7,
+    InvalidItems = 8,
+    CreatedNeedsConfirmation = 9,
+    CanceledBySecondFactor = 10
 }
 
 client.on('webSession', (sessionid: string, cookies: string[]) => {
     community.setCookies(cookies);
-});
-
-client.on('tradeOffers', async (offers: Offer[]) => {
-    console.log(`Received ${offers.length} trade offers.`);
-    for (const offer of offers) {
-        await handleOffer(offer);
-    }
 });
 
 async function handleOffer(offer: Offer): Promise<void> {

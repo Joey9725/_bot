@@ -12,7 +12,7 @@ import {
     getUserClassifiedListingLimits,
     getNotifications
 } from '../src/bptf-web';
-import { BPTF_API_KEY, BPTF_USER_TOKEN } from '../src/config';
+import { BPTF_USER_TOKEN } from '../src/config';
 
 // Mock the entire Axios module
 jest.mock('axios');

@@ -27,6 +27,8 @@
     "@types/axios": "^0.14.0",
     "@types/jest": "^29.5.4",
     "@types/node": "^20.5.8",
+    "@types/steam-totp": "^2.1.0",
+    "@types/steam-user": "^4.26.4",
     "jest": "^29.6.4",
     "ts-jest": "^29.1.1"
   }

@@ -1,7 +1,10 @@
-import * as SteamUser from 'steam-user';
+import SteamUser from 'steam-user';
 import SteamTotp from 'steam-totp';
 import SteamCommunity from '@tf2autobot/steamcommunity';
 import { SHARED_SECRET, STEAM_USERNAME, STEAM_PASSWORD } from './config';
+
+let currentRetry = 0;
+const retryInterval = 10000; // 10 seconds
 
 // Define the Offer type
 export interface Offer {
@@ -9,14 +12,19 @@ export interface Offer {
     state: number;
     partner: { getSteamID64: () => string };
     requiresMobileConfirmation: boolean;
-    // Add other fields as needed
+}
+export interface CustomSteamUser extends SteamUser {
+    acceptOffer(id: string): Promise<any>;
+    declineOffer(id: string): Promise<any>;
 }
 
-export const client = new SteamUser();
+export const client = new SteamUser() as CustomSteamUser;
 export const community = new SteamCommunity();
 
 export function loginToSteam(): void {
+
     const tfacode = SteamTotp.generateAuthCode(SHARED_SECRET);
+
     const logOnOptions = {
         accountName: STEAM_USERNAME,
         password: STEAM_PASSWORD,
@@ -24,9 +32,24 @@ export function loginToSteam(): void {
     };
     client.logOn(logOnOptions);
 }
+client.on('loggedOn', () => {
+    console.log('Bot is online!');
+    currentRetry = 0; // Reset retry count on successful login
+    client.setPersona(SteamUser.EPersonaState.Online);
+    client.gamesPlayed([440, "beep...TRADING...boop"]);
+});
 
-module.exports = {
-    client,
-    community,
-    loginToSteam
-};
+client.on('webSession', (sessionid, cookies) => {
+    community.setCookies(cookies);
+});
+
+client.on('error', (err) => {
+    if (err.message === 'RateLimitExceeded') {
+        const waitTime = Math.pow(2, currentRetry) * retryInterval;
+        console.error(`Rate limited by Steam. Retrying in ${waitTime / 1000} seconds.`);
+        setTimeout(loginToSteam, waitTime);
+        currentRetry++;
+    } else {
+        console.error(`There was an error logging into Steam: ${err.message}`);
+    }
+});

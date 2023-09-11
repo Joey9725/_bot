@@ -1,12 +1,12 @@
 import axios from 'axios';
 import rateLimit from 'axios-rate-limit'
 import { BPTF_API_KEY, BPTF_USER_TOKEN } from './config';
-
+console.log(BPTF_USER_TOKEN, BPTF_API_KEY)
 if (!BPTF_API_KEY) {
-  throw new Error("API key is missing or expired");
+  console.error("API key is missing or expired");
 }
 else if (!BPTF_USER_TOKEN) {
-  throw new Error("User token is missing or expired")
+  console.error("User token is missing or expired")
 }
 
 const BASE_URL = 'https://backpack.tf/api/';
@@ -55,8 +55,6 @@ async function makeRequest(endpoint: string, params: MakeRequestParams) {
     throw error;  // Re-throw the error if you want it to propagate
   }
 }
-
-
 
 async function getCurrencies(raw = 2) {
   console.log("Entering getCurrencies");
@@ -122,7 +120,6 @@ async function getPriceHistory(params: PriceHistoryParams) {
     throw error;
   }
 }
-
 
 async function getSpecialItems(appid = 440) {
   const endpoint = 'IGetSpecialItems/v1';
