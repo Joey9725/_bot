@@ -1,7 +1,6 @@
 import axios from 'axios';
-import rateLimit from 'axios-rate-limit'
 import { BPTF_API_KEY, BPTF_USER_TOKEN } from './config';
-console.log(BPTF_USER_TOKEN, BPTF_API_KEY)
+
 if (!BPTF_API_KEY) {
   console.error("API key is missing or expired");
 }
@@ -143,8 +142,10 @@ async function getPriceSchema(raw = 2, since?: 1999999) {
   const endpoint = 'IGetPrices/v4';
   const params = {raw, since};
   const data = await makeRequest(endpoint, params);
+  console.log("Data inside getPriceSchema:", data);
   return data ? data.pricelist : null;
 }
+
 
 async function getUserListings(steamid: string) {
   const endpoint = `IGetUserTrades/v1/${steamid}`;
