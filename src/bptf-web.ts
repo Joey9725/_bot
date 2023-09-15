@@ -143,15 +143,15 @@ function getPriceSchema(raw = 2, since?: number): Promise<any | null> {
 
     return makeRequest(endpoint, params)
         .then(data => {
-            if (!data) {
-                console.log("Debug: data is null or undefined");
+            if (!data || !data.response || !data.response.items) {
+                console.log("Debug: data is null, undefined, or not structured as expected");
                 return null;
             }
 
-            // Save the price schema to a file
-            fs.writeFileSync('priceSchema.json', JSON.stringify(data))
+            // Save only the 'items' part of the response
+            fs.writeFileSync('priceSchema.json', JSON.stringify(data.response.items));
 
-            return data;  // or some processed form of the data
+            return data.response.items;
         })
         .catch(error => {
             console.log('An error occurred:', error);
@@ -240,7 +240,15 @@ function getNotifications(skip: number, limit: number, unread: number): Promise<
       .catch(_ => null);
 }
 
+function getClassifiedListings(): Promise<any | null> {
+    const endpoint = 'v2/classifieds/listings';
+    return makeRequest(endpoint, {})
+        .then(data => data || null)
+        .catch(_ => null);
+}
+
 export {
+  getClassifiedListings,
   getListingById,
   getCurrencies,
   getPriceHistory,
