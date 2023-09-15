@@ -1,7 +1,10 @@
 import SteamUser from 'steam-user';
 import SteamTotp from 'steam-totp';
 import SteamCommunity from '@tf2autobot/steamcommunity';
-import { SHARED_SECRET, STEAM_USERNAME, STEAM_PASSWORD } from './config';
+
+const SHARED_SECRET = process.env.SHARED_SECRET;
+const STEAM_USERNAME = process.env.STEAM_USERNAME;
+const STEAM_PASSWORD = process.env.STEAM_PASSWORD;
 
 let currentRetry = 0;
 const retryInterval = 10000; // 10 seconds
@@ -18,7 +21,7 @@ export interface CustomSteamUser extends SteamUser {
     declineOffer(id: string): Promise<any>;
 }
 
-export const client = new SteamUser() as CustomSteamUser;
+export const client  = new SteamUser() as CustomSteamUser;
 export const community = new SteamCommunity();
 
 export function loginToSteam(): void {

@@ -1,29 +1,31 @@
-import {getPriceSchema, getPriceFromSchemaFile, getClassifiedListings} from './bptf-web';
+import {
+    getAgentStatus,
+    getPriceFromSchemaFile,
+    registerAgent,
+    getAveragePriceForItem, // Import the getAveragePriceForItem function
+} from './bptf-web';
+
+interface ClassifiedListing {
+    item_name: string;
+    price: number;
+    // Add other properties that you expect here
+}
+
+const registerResponse = registerAgent();
+console.log("Agent registered:", registerResponse);
+
+const statusResponse = getAgentStatus();
+console.log("Agent status:", statusResponse);
 
 async function main() {
     console.log("Inside main");
 
-    const itemName = 'Mann Co. Supply Crate Key';
-    const schema = await getPriceSchema();
+    const itemName = 'Mann Co. Supply Crate Key'; // Replace with the item name you want to calculate the price for
+    const { sell, buy } = await getAveragePriceForItem(itemName);
 
-    //console.log("Schema Data:", schema); // Debug
-
-    const priceData = getPriceFromSchemaFile(itemName);
-    if (priceData) {
-        //console.log("All keys in schema:", Object.keys(priceData));
-        //console.log(`Price data for ${itemName}:`, JSON.stringify(priceData, null, 2));
-        //console.log("Detailed prices for Craftable and Tradable:", priceData['6'].Tradable.Craftable);
-    } else {
-        //console.log(`${itemName} not found in the price schema.`);
-    }
-
-    const classifiedData = await getClassifiedListings();
-    if (classifiedData) {
-        console.log(`Classified listings data:`, classifiedData);
-        // Extract and compare prices here
-    } else {
-        console.log(`No data found in the classified listings.`);
-    }
+    console.log(`Item: ${itemName}`);
+    console.log(`Average Sell Price: ${sell !== null ? sell.toFixed(2) : 'N/A'}`);
+    console.log(`Average Buy Price: ${buy !== null ? buy.toFixed(2) : 'N/A'}`);
 }
 
 main();
