@@ -1,11 +1,12 @@
 import SteamUser from 'steam-user';
 import SteamTotp from 'steam-totp';
 import SteamCommunity from '@tf2autobot/steamcommunity';
+import { config as configDotenv } from 'dotenv';
 
 const SHARED_SECRET = process.env.SHARED_SECRET;
 const STEAM_USERNAME = process.env.STEAM_USERNAME;
 const STEAM_PASSWORD = process.env.STEAM_PASSWORD;
-
+configDotenv();
 let currentRetry = 0;
 const retryInterval = 10000; // 10 seconds
 
