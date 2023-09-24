@@ -1,12 +1,16 @@
-import { Logger } from "./logger";
-import { BaseError, NetworkError } from "./errorHandler";
+import {Logger} from "./logger";
+import {BaseError, NetworkError} from "./errorHandler";
 import axios, {AxiosError, AxiosRequestConfig} from 'axios';
 import {config as configDotenv} from 'dotenv';
-import * as fs from 'fs';
-// Import custom error classes
+import {
+    CacheData,
+    RawCurrencyData,
+    PriceHistoryParams,
+    PriceHistoryData,
+    ClassifiedSearchResponse,
+    ResponseData
+} from './interfaces';
 
-
-// Load environment variables from .env file
 configDotenv();
 class LRUCache<K, V> {
     private readonly maxSize: number;
@@ -47,33 +51,8 @@ const cache = new LRUCache<string, CacheData>(100);
 type MakeRequestParams = Record<string, any>;
 let rateLimitResetTime = 0;
 
-// Define interfaces for API response data
-interface ClassifiedListing {
-    item_name: string;
-    price: number;
-    // Add other properties that you expect here
-}
-
-interface CacheData {
-    data: any; // You can make this more specific depending on your needs
-    expireTime: number;
-}
-
-interface ResponseData {
-    response?: any;
-    items?: any;
-    listings?: any;
-    history?: any;
-    results?: any;
-    users?: any;
-}
-
-interface PriceHistoryParams {
-    item: string;
-    quality: string;
-    tradable: boolean;
-    craftable: boolean;
-    priceindex: number;
+if (!BPTF_USER_TOKEN || !BPTF_API_KEY) {
+    throw new BaseError("Environment variables BPTF_USER_TOKEN and BPTF_API_KEY must be set", 1001);
 }
 
 // Handle API request errors and retries
@@ -145,6 +124,7 @@ async function makeRequest(
 
         if (response.status === 200) {
             cache.set(cacheKey, { data: response.data, expireTime: Date.now() + 3600000 });
+            rateLimitResetTime = Date.now() + Number(response.headers['x-rate-limit-reset']) * 1000; // Update this line
             return response.data;
         } else if (response.status === 429) {
             rateLimitResetTime = Date.now() + Number(response.headers['x-rate-limit-reset']);
@@ -158,7 +138,7 @@ async function makeRequest(
 }
 
 // Get price history for an item from the backpack.tf API
-async function getPriceHistoryForItem(
+async function getPriceHistory(
   appid: string,
   item: string,
   quality: string,
@@ -174,62 +154,46 @@ async function getPriceHistoryForItem(
         return data ? data.history : null;
     } catch (error) {
         Logger.error(`An error occurred while fetching price history for an item: ${error}`);
-        return null;
+        return;
     }
 }
 
-
-// Get a list of currencies from the backpack.tf API
-async function getCurrencies(raw = 2): Promise<ResponseData | null> {
+export async function getCurrencies(raw = 2): Promise<RawCurrencyData[] | null> {
     try {
         const endpoint = 'IGetCurrencies/v1';
         const params = { raw };
-        const data: ResponseData | null = await makeRequest(endpoint, params);
+        const data: { response: { currencies: Record<string, RawCurrencyData> } } | null = await makeRequest(endpoint, params);
 
-        if (!data || !data.response) {
+        // Add a debug log here to show what's coming back from the API
+        Logger.debug(`Raw API Response for Currencies: ${JSON.stringify(data)}`);
+
+        if (!data || !data.response || !data.response.currencies) {
             Logger.info('Failed to retrieve currency data');
             return null;
         }
 
-        return data.response;
+        // Convert the response into an array of RawCurrencyData
+        const currencies: RawCurrencyData[] = Object.values(data.response.currencies);
+
+        return currencies;
     } catch (error) {
-        Logger.info(`Error in getCurrencies: ${error}`);
+        Logger.error(`An error occurred in getCurrencies: ${error}`);
         return null;
     }
 }
 
-// Get the price history for an item from the backpack.tf API
-async function getPriceHistory(params: PriceHistoryParams): Promise<any[] | null> {
-    Logger.info('Entering getPriceHistory');
-
-    const { item, quality, tradable, craftable, priceindex } = params;
-    const endpoint = 'IGetPrices/v4';
-    const newParams = { item, quality, tradable, craftable, priceindex };
-
-    try {
-        const data: any | null = await makeRequest(endpoint, newParams);
-
-        if (!data || !data.items) {
-            Logger.info('Returning null because data or data.items is null or undefined');
-            return null;
-        }
-
-        Logger.info(`Retrieved items: ${data.items}`);
-        return data.items;
-    } catch (error) {
-        Logger.info(`An error occurred while fetching price history: ${error}`);
-        return null;
-    }
-}
-
-// Get a list of special items from the backpack.tf API
-async function getSpecialItems(appid = 440): Promise<any | null> {
+export async function getSpecialItems(appid = 440): Promise<any[] | null> {
     const endpoint = 'IGetSpecialItems/v1';
     const params = { appid };
 
     try {
         const data: any | null = await makeRequest(endpoint, params);
-        return data ? data.response : null;
+        if (data && data.response && data.response.items) {
+            return data.response.items;
+        } else {
+            Logger.warn('No special items retrieved.');
+            return null;
+        }
     } catch (error) {
         Logger.error(`An error occurred while fetching special items: ${error}`);
         return null;
@@ -246,49 +210,6 @@ async function getUserData(steamid: string): Promise<any | null> {
         return data ? data.users : null;
     } catch (error) {
         Logger.error(`An error occurred while fetching user data: ${error}`);
-        return null;
-    }
-}
-
-// Get the price schema from the backpack.tf API
-async function getPriceSchema(raw = 2, since?: number): Promise<any | null> {
-    const endpoint = 'IGetPrices/v4';
-    const params = { raw, since };
-
-    try {
-        const data: any | null = await makeRequest(endpoint, params);
-
-        if (!data || !data.response || !data.response.items) {
-            Logger.info('Debug: data is null, undefined, or not structured as expected');
-            return null;
-        }
-
-        // Save only the 'items' part of the response
-        fs.writeFileSync('priceSchema.json', JSON.stringify(data.response.items));
-        return data.response.items;
-    } catch (error) {
-        Logger.info(`An error occurred: ${error}`);
-        return null;
-    }
-}
-
-async function getPriceFromSchemaFile(itemName: string): Promise<any | null> {
-    try {
-        // Read the file
-        const fileData = fs.readFileSync('priceSchema.json', 'utf8');
-
-        // Parse the JSON data
-        const priceSchema = JSON.parse(fileData);
-
-        // Find the price of the item
-        const itemData = priceSchema[itemName];
-        if (itemData && itemData.prices) {
-            return itemData.prices; // Return the price data for the item
-        } else {
-            return null; // Item not found in the price schema
-        }
-    } catch (error) {
-        Logger.error(`An error occurred while reading the price schema: ${error}`);
         return null;
     }
 }
@@ -319,108 +240,25 @@ async function getImpersonatedUsers(limit: number, skip: number): Promise<any | 
     }
 }
 
-// Get the average buy and sell prices for an item
-async function getAveragePriceForItem(itemName: string): Promise<{ buy: { avg: string; min: string; max: string }; sell: { avg: string; min: string; max: string } }> {
+async function searchClassifieds(itemName: string, intent: string): Promise<ClassifiedSearchResponse | null> {
     try {
         const endpoint = 'classifieds/search/v1';
-
-        const sellParams = {
+        const params = {
             item: itemName,
-            key: BPTF_API_KEY,
-            intent: 'sell',
-            page_size: 1,
-            fold: 0,
-
-        };
-
-        const buyParams = {
-            item: itemName,
-            key: BPTF_API_KEY,
-            intent: 'buy',
+            key: BPTF_API_KEY,  // Make sure BPTF_API_KEY is defined somewhere in your code
+            intent: intent,
             page_size: 10,
-            fold: 0,
-
+            fold: 1,
         };
 
-        const axiosConfig: AxiosRequestConfig = {
-            url: `${BASE_URL}${endpoint}`,
-            headers: {
-                'X-Auth-Token': BPTF_USER_TOKEN,
-            },
-        };
+        const response = await axios.get(`${BASE_URL}${endpoint}`, { params: params });
 
-        const [sellResponse, buyResponse] = await Promise.all([
-            axios.get(axiosConfig.url, {
-                params: sellParams,
-                headers: axiosConfig.headers,
-            }),
-            axios.get(axiosConfig.url, {
-                params: buyParams,
-                headers: axiosConfig.headers,
-            }),
-        ]);
-
-        if (sellResponse.status !== 200 || buyResponse.status !== 200) {
-            throw new BaseError(`Failed with status code: sell-${sellResponse.status}, buy-${buyResponse.status}`, 1000);
-        }
-
-        const sellData = sellResponse.data;
-        const buyData = buyResponse.data;
-
-        if (sellData.total > 0 || buyData.total > 0) {
-            const sellListings = sellData.sell.listings;
-            const buyListings = buyData.buy.listings;
-
-            const sellPrices = sellListings.map((listing: any) => listing.currencies.metal);
-            const buyPrices = buyListings.map((listing: any) => listing.currencies.metal);
-
-            let sellPriceInfo: { avg: string; min: string; max: string } | null = null;
-            let buyPriceInfo: { avg: string; min: string; max: string } | null = null;
-
-            if (sellPrices.length > 0) {
-                const sellTotalPrice = sellPrices.reduce((acc: number, price: number) => acc + price, 0);
-                const sellAveragePrice = sellTotalPrice / sellPrices.length;
-                const sellMinPrice = Math.min(...sellPrices);
-                const sellMaxPrice = Math.max(...sellPrices);
-                sellPriceInfo = {
-                    avg: sellAveragePrice.toFixed(2),
-                    min: sellMinPrice.toFixed(2),
-                    max: sellMaxPrice.toFixed(2)
-                };
-            }
-
-            if (buyPrices.length > 0) {
-                const buyTotalPrice = buyPrices.reduce((acc: number, price: number) => acc + price, 0);
-                const buyAveragePrice = buyTotalPrice / buyPrices.length;
-                const buyMinPrice = Math.min(...buyPrices);
-                const buyMaxPrice = Math.max(...buyPrices);
-                buyPriceInfo = {
-                    avg: buyAveragePrice.toFixed(2),
-                    min: buyMinPrice.toFixed(2),
-                    max: buyMaxPrice.toFixed(2)
-                };
-            }
-
-            return { buy: sellPriceInfo, sell: buyPriceInfo };
+        if (response.status === 200) {
+            return response.data as ClassifiedSearchResponse;
         } else {
-            Logger.info('No sell or buy listings found for the item.');
-            return { sell: null, buy: null };
+            return null;
         }
     } catch (error) {
-        Logger.error(`An error occurred while fetching classified listings: ${error}`);
-        return { sell: null, buy: null };
-    }
-}
-
-// Get a specific listing by its ID
-async function getListingById(id: string): Promise<any | null> {
-    const endpoint = `classifieds/listings/${id}`;
-
-    try {
-        const data: any | null = await makeRequest(endpoint, {});
-        return data || null;
-    } catch (error) {
-        Logger.error(`An error occurred while fetching a listing by ID: ${error}`);
         return null;
     }
 }
@@ -472,7 +310,7 @@ async function registerAgent() {
 async function unregisterAgent() {
     const endpoint = 'agent/stop'
     try {
-        const data = makeRequest(endpoint, {}, "POST");
+        const data = await makeRequest(endpoint, {}, "POST");
 
         Logger.info(`Successfully unregistered agent: ${data}`);
 
@@ -504,17 +342,11 @@ export {
     registerAgent,
     unregisterAgent,
     getAgentStatus,
-    getListingById,
-    getCurrencies,
     getPriceHistory,
-    getSpecialItems,
     getUserData,
-    getPriceSchema,
-    getPriceFromSchemaFile,
     getUserListings,
-    getPriceHistoryForItem,
     getImpersonatedUsers,
-    getAveragePriceForItem,
+    searchClassifieds,
     getUserClassifiedListingLimits,
     getNotifications,
 };
