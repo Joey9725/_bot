@@ -12,40 +12,13 @@ import {
 } from './interfaces';
 
 configDotenv();
-class LRUCache<K, V> {
-    private readonly maxSize: number;
-    private cacheMap: Map<K, V>;
-
-    constructor(maxSize: number) {
-        this.maxSize = maxSize;
-        this.cacheMap = new Map();
-    }
-
-    // Get an item from the cache and refresh its position
-    get(key: K): V | undefined {
-        const item = this.cacheMap.get(key);
-        if (item) {
-            this.cacheMap.delete(key);
-            this.cacheMap.set(key, item);
-        }
-        return item;
-    }
-
-    // Set an item in the cache and remove the oldest item if the cache is full
-    set(key: K, value: V): void {
-        if (this.cacheMap.size >= this.maxSize) {
-            const firstKey = this.cacheMap.keys().next().value;
-            this.cacheMap.delete(firstKey);
-        }
-        this.cacheMap.set(key, value);
-    }
-}
 
 // Define constants
 const BPTF_USER_TOKEN = process.env.BPTF_USER_TOKEN;
 const BPTF_API_KEY = process.env.BPTF_API_KEY;
 const BASE_URL = 'https://backpack.tf/api/';
-const cache = new LRUCache<string, CacheData>(100);
+const appid = 440; //TF2 APPID
+const priceindex = 0; //The priceindex handles particle effects for unusual items
 
 // Define types and classes
 type MakeRequestParams = Record<string, any>;
@@ -91,8 +64,6 @@ async function makeRequest(
   retry = 3,
   backoff = 500
 ): Promise<any> {
-    Logger.info('makeRequest called');
-    const cacheKey = `${endpoint}-${JSON.stringify(params)}`;
     const now = Date.now();
 
     // Check if the rate limit is active and wait if necessary
@@ -100,12 +71,6 @@ async function makeRequest(
         Logger.info('Rate limit active. Waiting...');
         await new Promise<void>(resolve => setTimeout(() => resolve(), rateLimitResetTime - now));
         return makeRequest(endpoint, params, method, retry, backoff);
-    }
-
-    // Check if the data is cached and still valid
-    const cachedData = cache.get(cacheKey);
-    if (cachedData && cachedData.expireTime > Date.now()) {
-        return cachedData.data;
     }
 
     const url = `${BASE_URL}${endpoint}`;
@@ -122,8 +87,9 @@ async function makeRequest(
     try {
         const response = await axios.request(axiosConfig);
 
+        Logger.info(`API Response received with status:, ${response.status}`);
+
         if (response.status === 200) {
-            cache.set(cacheKey, { data: response.data, expireTime: Date.now() + 3600000 });
             rateLimitResetTime = Date.now() + Number(response.headers['x-rate-limit-reset']) * 1000; // Update this line
             return response.data;
         } else if (response.status === 429) {
@@ -133,28 +99,25 @@ async function makeRequest(
             return Promise.reject(`Failed with status code: ${response.status}. Headers: ${JSON.stringify(response.headers)}. Body: ${JSON.stringify(response.data)}`);
         }
     } catch (error) {
+        Logger.error(`An error occurred during the API request: ${error}`);
         return handleRequestError(error, endpoint, params, method, retry, backoff);
     }
 }
 
 // Get price history for an item from the backpack.tf API
-async function getPriceHistory(
-  appid: string,
-  item: string,
-  quality: string,
-  tradable: string,
-  craftable: string,
-  priceindex: string
-): Promise<any | null> {
+async function getPriceHistory(item: string, quality: number, tradable: number, craftable: number): Promise<any | null> {
     const endpoint = 'IGetPriceHistory/v1';
     const params = { appid, item, quality, tradable, craftable, priceindex };
 
     try {
         const data: any | null = await makeRequest(endpoint, params);
-        return data ? data.history : null;
+        console.log("Full API Response:", data);
+
+        return data && data.response ? data.response.history : null;
+
     } catch (error) {
         Logger.error(`An error occurred while fetching price history for an item: ${error}`);
-        return;
+        return null;
     }
 }
 
@@ -182,7 +145,7 @@ export async function getCurrencies(raw = 2): Promise<RawCurrencyData[] | null> 
     }
 }
 
-export async function getSpecialItems(appid = 440): Promise<any[] | null> {
+export async function getSpecialItems(): Promise<any[] | null> {
     const endpoint = 'IGetSpecialItems/v1';
     const params = { appid };
 
@@ -240,14 +203,19 @@ async function getImpersonatedUsers(limit: number, skip: number): Promise<any | 
     }
 }
 
-async function searchClassifieds(itemName: string, intent: string): Promise<ClassifiedSearchResponse | null> {
+async function searchClassifieds(itemName: string, intent: string, quality: number, craftable: number, priceindex?: number, elevated?: number): Promise<ClassifiedSearchResponse | null> {
     try {
         const endpoint = 'classifieds/search/v1';
         const params = {
             item: itemName,
+            quality: 6,
+            tradeable: 1,
+            killstreak_tier: 0,
+            elevated: null,
+            craftable: 1,
             key: BPTF_API_KEY,  // Make sure BPTF_API_KEY is defined somewhere in your code
             intent: intent,
-            page_size: 10,
+            page_size: 15,
             fold: 1,
         };
 

@@ -19,6 +19,7 @@ export interface ListingElement {
   id: string;
   steamid: string;
   item: Item;
+  details: string;
   currencies: Currency;
   intent: number;
 }

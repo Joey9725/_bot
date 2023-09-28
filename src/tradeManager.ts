@@ -8,7 +8,6 @@ interface MyCustomSteamUser extends SteamUser {
     declineOffer(id: string): Promise<any>;
 }
 
-
 enum ETradeOfferState {
     Invalid = 1,
     Active = 2,
